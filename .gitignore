@@ -1,0 +1,4 @@
+huectl
+__debug_bin*
+.vscode/
+huectl.service

@@ -1,0 +1,20 @@
+[Unit]
+Description=Hue Control Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/huectl
+Restart=always
+RestartSec=10
+User=%u
+SupplementaryGroups=input
+Environment=HUE_BRIDGE_IP=your_bridge_ip
+Environment=HUE_USERNAME=your_bridge_username
+Environment=HUE_LIGHT_ID=your_light_id
+Environment=HUE_KEY_CODE=187
+Environment=HUE_DEVICE_PATH=/dev/input/event0
+
+[Install]
+WantedBy=multi-user.target 
