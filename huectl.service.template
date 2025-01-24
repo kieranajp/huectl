@@ -15,6 +15,7 @@ Environment=HUE_USERNAME=your_bridge_username
 Environment=HUE_LIGHT_ID=your_light_id
 Environment=HUE_KEY_CODE=187
 Environment=HUE_DEVICE_PATH=/dev/input/event0
+Environment=HUE_SCENE_IDS=Bpkiz5bXN8lpBtci,AGjPZYg5ob9LuuRe
 
 [Install]
 WantedBy=multi-user.target 

@@ -25,6 +25,7 @@ The service expects the following environment variables:
 - `HUE_LIGHT_ID`: ID of the light to control
 - `HUE_KEY_CODE`: Key code to trigger the light (default: 187 for F17)
 - `HUE_DEVICE_PATH`: Input device path (default: /dev/input/event0)
+- `HUE_SCENE_IDS`: Comma-separated list of scene IDs to rotate between (optional)
 
 ## Makefile Targets
 
