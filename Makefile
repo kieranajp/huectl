@@ -38,7 +38,7 @@ test:
 	$(GOTEST) -v ./...
 
 # Deploy binary to Pi
-deploy: pi
+deploy: test pi
 	scp $(BINARY_NAME) $(PI_HOST):/tmp/
 	ssh $(PI_HOST) "sudo mv /tmp/$(BINARY_NAME) $(INSTALL_PATH) && sudo chmod +x $(INSTALL_PATH)/$(BINARY_NAME)"
 
