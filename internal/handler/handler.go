@@ -112,7 +112,7 @@ func (h *Handler) adjustBrightness(delta int) {
 		bri = 254
 	}
 
-	state := &huego.State{Bri: uint8(bri)}
+	state := &huego.State{On: true, Bri: uint8(bri)}
 	_, err = h.bridge.SetGroupState(h.cfg.GroupID, *state)
 	if err != nil {
 		log.Printf("Error adjusting brightness: %v", err)
