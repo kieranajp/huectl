@@ -141,7 +141,7 @@ func TestAdjustBrightness(t *testing.T) {
 				},
 			}, nil)
 
-			mockBridge.On("SetGroupState", 1, huego.State{Bri: uint8(tt.expectedBri)}).Return(&huego.Response{}, nil)
+			mockBridge.On("SetGroupState", 1, huego.State{On: true, Bri: uint8(tt.expectedBri)}).Return(&huego.Response{}, nil)
 
 			// Execute
 			h.adjustBrightness(tt.delta)
