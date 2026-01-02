@@ -17,11 +17,12 @@ type Bridge interface {
 }
 
 type Handler struct {
-	cfg      *Config
-	bridge   Bridge
-	device   *evdev.InputDevice
-	scenes   []string
-	sceneIdx int
+	cfg             *Config
+	bridge          Bridge
+	device          *evdev.InputDevice
+	scenes          []string
+	sceneIdx        int
+	dynamicsEnabled bool
 }
 
 func New(cfg *Config) (*Handler, error) {
@@ -38,9 +39,10 @@ func New(cfg *Config) (*Handler, error) {
 	}
 
 	return &Handler{
-		cfg:    cfg,
-		bridge: bridge,
-		scenes: scenes,
+		cfg:             cfg,
+		bridge:          bridge,
+		scenes:          scenes,
+		dynamicsEnabled: true, // Start with dynamics enabled
 	}, nil
 }
 
