@@ -5,7 +5,7 @@ const (
 	KnobPress  = 187 // Toggle
 	KnobLeft   = 188 // Dim
 	KnobRight  = 189 // Brighten
-	SceneLeft  = 185 // Previous scene
+	SceneNext  = 185 // Next scene
 	SceneRight = 186 // Toggle dynamics
 
 	// Light control values

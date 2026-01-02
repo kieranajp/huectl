@@ -152,45 +152,26 @@ func TestAdjustBrightness(t *testing.T) {
 	}
 }
 
-func TestRotateScene(t *testing.T) {
+func TestNextScene(t *testing.T) {
 	tests := []struct {
 		name          string
 		scenes        []string
 		initialIndex  int
-		direction     int
 		expectedIndex int
 		expectedError bool
 	}{
 		{
-			name:          "rotate forward",
+			name:          "next scene",
 			scenes:        []string{"scene1", "scene2", "scene3"},
 			initialIndex:  0,
-			direction:     1,
 			expectedIndex: 1,
 			expectedError: false,
 		},
 		{
-			name:          "rotate backward",
-			scenes:        []string{"scene1", "scene2", "scene3"},
-			initialIndex:  1,
-			direction:     -1,
-			expectedIndex: 0,
-			expectedError: false,
-		},
-		{
-			name:          "wrap around forward",
+			name:          "wrap around to first scene",
 			scenes:        []string{"scene1", "scene2", "scene3"},
 			initialIndex:  2,
-			direction:     1,
 			expectedIndex: 0,
-			expectedError: false,
-		},
-		{
-			name:          "wrap around backward",
-			scenes:        []string{"scene1", "scene2", "scene3"},
-			initialIndex:  0,
-			direction:     -1,
-			expectedIndex: 2,
 			expectedError: false,
 		},
 	}
@@ -215,11 +196,59 @@ func TestRotateScene(t *testing.T) {
 			mockBridge.On("RecallScene", expectedScene, 0).Return(&huego.Response{}, nil)
 
 			// Execute
-			h.rotateScene(tt.direction)
+			h.nextScene()
 
 			// Verify
 			mockBridge.AssertExpectations(t)
 			assert.Equal(t, tt.expectedIndex, h.sceneIdx)
+		})
+	}
+}
+
+func TestToggleDynamics(t *testing.T) {
+	tests := []struct {
+		name            string
+		initialDynamics bool
+		expectedDynamics bool
+		expectedEffect  string
+	}{
+		{
+			name:            "disable dynamics",
+			initialDynamics: true,
+			expectedDynamics: false,
+			expectedEffect:  "none",
+		},
+		{
+			name:            "enable dynamics",
+			initialDynamics: false,
+			expectedDynamics: true,
+			expectedEffect:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockBridge := new(MockBridge)
+			cfg := &Config{
+				BridgeIP: "192.168.1.33",
+				Username: "test",
+				GroupID:  1,
+			}
+			h := &Handler{
+				cfg:             cfg,
+				bridge:          mockBridge,
+				dynamicsEnabled: tt.initialDynamics,
+			}
+
+			// Setup mock expectations
+			mockBridge.On("SetGroupState", 1, huego.State{Effect: tt.expectedEffect}).Return(&huego.Response{}, nil)
+
+			// Execute
+			h.toggleDynamics()
+
+			// Verify
+			mockBridge.AssertExpectations(t)
+			assert.Equal(t, tt.expectedDynamics, h.dynamicsEnabled)
 		})
 	}
 }
