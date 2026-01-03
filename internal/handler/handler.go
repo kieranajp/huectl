@@ -17,11 +17,12 @@ type Bridge interface {
 }
 
 type Handler struct {
-	cfg      *Config
-	bridge   Bridge
-	device   *evdev.InputDevice
-	scenes   []string
-	sceneIdx int
+	cfg             *Config
+	bridge          Bridge
+	device          *evdev.InputDevice
+	scenes          []string
+	sceneIdx        int
+	dynamicsEnabled bool
 }
 
 func New(cfg *Config) (*Handler, error) {
@@ -38,9 +39,10 @@ func New(cfg *Config) (*Handler, error) {
 	}
 
 	return &Handler{
-		cfg:    cfg,
-		bridge: bridge,
-		scenes: scenes,
+		cfg:             cfg,
+		bridge:          bridge,
+		scenes:          scenes,
+		dynamicsEnabled: true, // Start with dynamics enabled
 	}, nil
 }
 
@@ -77,10 +79,10 @@ func (h *Handler) handleKeyEvent(code evdev.EvCode) {
 		h.adjustBrightness(-BrightnessIncrement)
 	case evdev.EvCode(KnobRight):
 		h.adjustBrightness(BrightnessIncrement)
-	case evdev.EvCode(SceneLeft):
-		h.rotateScene(-1)
-	case evdev.EvCode(SceneRight):
-		h.rotateScene(1)
+	case evdev.EvCode(SceneNext):
+		h.nextScene()
+	case evdev.EvCode(ToggleDynamics):
+		h.toggleDynamics()
 	}
 }
 
@@ -119,13 +121,13 @@ func (h *Handler) adjustBrightness(delta int) {
 	}
 }
 
-func (h *Handler) rotateScene(direction int) {
+func (h *Handler) nextScene() {
 	if len(h.scenes) == 0 {
 		log.Printf("No scenes configured")
 		return
 	}
 
-	h.sceneIdx = (h.sceneIdx + direction + len(h.scenes)) % len(h.scenes)
+	h.sceneIdx = (h.sceneIdx + 1) % len(h.scenes)
 	sceneID := h.scenes[h.sceneIdx]
 
 	_, err := h.bridge.RecallScene(sceneID, 0) // 0 for all lights
@@ -134,4 +136,23 @@ func (h *Handler) rotateScene(direction int) {
 		return
 	}
 	log.Printf("Activated scene: %s", sceneID)
+}
+
+func (h *Handler) toggleDynamics() {
+	h.dynamicsEnabled = !h.dynamicsEnabled
+
+	var effect string
+	if h.dynamicsEnabled {
+		effect = "" // Empty string clears the effect, allowing color changes
+		log.Printf("Dynamics enabled")
+	} else {
+		effect = "none" // Freeze current colors
+		log.Printf("Dynamics disabled")
+	}
+
+	state := &huego.State{Effect: effect}
+	_, err := h.bridge.SetGroupState(h.cfg.GroupID, *state)
+	if err != nil {
+		log.Printf("Error toggling dynamics: %v", err)
+	}
 }
