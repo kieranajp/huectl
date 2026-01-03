@@ -209,20 +209,38 @@ func TestToggleDynamics(t *testing.T) {
 	tests := []struct {
 		name            string
 		initialDynamics bool
+		scenes          []string
+		sceneIdx        int
 		expectedDynamics bool
 		expectedEffect  string
+		expectedFlashColor []float32
 	}{
 		{
-			name:            "disable dynamics",
+			name:            "disable dynamics with scenes",
 			initialDynamics: true,
+			scenes:          []string{"scene1", "scene2"},
+			sceneIdx:        1,
 			expectedDynamics: false,
 			expectedEffect:  "none",
+			expectedFlashColor: []float32{0.55, 0.35},
 		},
 		{
-			name:            "enable dynamics",
+			name:            "enable dynamics with scenes",
 			initialDynamics: false,
+			scenes:          []string{"scene1", "scene2"},
+			sceneIdx:        0,
 			expectedDynamics: true,
 			expectedEffect:  "",
+			expectedFlashColor: []float32{0.2, 0.7},
+		},
+		{
+			name:            "disable dynamics without scenes",
+			initialDynamics: true,
+			scenes:          []string{},
+			sceneIdx:        0,
+			expectedDynamics: false,
+			expectedEffect:  "none",
+			expectedFlashColor: []float32{0.55, 0.35},
 		},
 	}
 
@@ -238,10 +256,34 @@ func TestToggleDynamics(t *testing.T) {
 				cfg:             cfg,
 				bridge:          mockBridge,
 				dynamicsEnabled: tt.initialDynamics,
+				scenes:          tt.scenes,
+				sceneIdx:        tt.sceneIdx,
 			}
 
-			// Setup mock expectations
-			mockBridge.On("SetGroupState", 1, huego.State{Effect: tt.expectedEffect}).Return(&huego.Response{}, nil)
+			// Get current state
+			mockBridge.On("GetGroup", 1).Return(&huego.Group{
+				ID: 1,
+				State: &huego.State{
+					On:  true,
+					Bri: uint8(150),
+				},
+			}, nil)
+
+			// Flash feedback
+			mockBridge.On("SetGroupState", 1, huego.State{
+				On: true,
+				Xy: tt.expectedFlashColor,
+				Bri: uint8(200),
+				TransitionTime: uint16(1),
+			}).Return(&huego.Response{}, nil)
+
+			// Scene recall if scenes exist
+			if len(tt.scenes) > 0 {
+				mockBridge.On("RecallScene", tt.scenes[tt.sceneIdx], 0).Return(&huego.Response{}, nil)
+			}
+
+			// Restore brightness and dynamics effect
+			mockBridge.On("SetGroupState", 1, huego.State{Bri: uint8(150), Effect: tt.expectedEffect}).Return(&huego.Response{}, nil)
 
 			// Execute
 			h.toggleDynamics()

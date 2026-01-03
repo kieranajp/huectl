@@ -139,19 +139,46 @@ func (h *Handler) nextScene() {
 }
 
 func (h *Handler) toggleDynamics() {
+	// Capture current state
+	group, err := h.bridge.GetGroup(h.cfg.GroupID)
+	if err != nil {
+		log.Printf("Error getting group state: %v", err)
+		return
+	}
+	currentBri := group.State.Bri
+
 	h.dynamicsEnabled = !h.dynamicsEnabled
 
 	var effect string
+	var flashColor []float32
 	if h.dynamicsEnabled {
 		effect = "" // Empty string clears the effect, allowing color changes
+		flashColor = []float32{0.2, 0.7} // Forest green
 		log.Printf("Dynamics enabled")
 	} else {
 		effect = "none" // Freeze current colors
+		flashColor = []float32{0.55, 0.35} // Coral red
 		log.Printf("Dynamics disabled")
 	}
 
-	state := &huego.State{Effect: effect}
-	_, err := h.bridge.SetGroupState(h.cfg.GroupID, *state)
+	// Flash feedback colour
+	flashState := &huego.State{On: true, Xy: flashColor, Bri: 200, TransitionTime: 1}
+	_, err = h.bridge.SetGroupState(h.cfg.GroupID, *flashState)
+	if err != nil {
+		log.Printf("Error flashing feedback: %v", err)
+	}
+
+	// Restore scene and brightness
+	if len(h.scenes) > 0 {
+		_, err = h.bridge.RecallScene(h.scenes[h.sceneIdx], 0)
+		if err != nil {
+			log.Printf("Error recalling scene: %v", err)
+		}
+	}
+
+	// Restore brightness and apply dynamics setting
+	state := &huego.State{Bri: currentBri, Effect: effect}
+	_, err = h.bridge.SetGroupState(h.cfg.GroupID, *state)
 	if err != nil {
 		log.Printf("Error toggling dynamics: %v", err)
 	}
