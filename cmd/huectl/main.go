@@ -30,10 +30,10 @@ func main() {
 				Usage:    "Hue bridge API username",
 				Required: true,
 			},
-			&cli.IntFlag{
-				Name:     "light-id",
-				EnvVars:  []string{"HUE_LIGHT_ID"},
-				Usage:    "ID of the light to control",
+			&cli.StringFlag{
+				Name:     "group-id",
+				EnvVars:  []string{"HUE_GROUP_ID"},
+				Usage:    "ID of the grouped light resource to control",
 				Required: true,
 			},
 			&cli.IntFlag{
@@ -66,6 +66,7 @@ func run(c *cli.Context) error {
 	cfg := &handler.Config{
 		BridgeIP:   c.String("bridge-ip"),
 		Username:   c.String("username"),
+		GroupID:    c.String("group-id"),
 		KeyCode:    c.Int("key-code"),
 		DevicePath: c.String("device-path"),
 		SceneIDs:   c.String("scene-ids"),

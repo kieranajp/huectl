@@ -5,20 +5,26 @@ import (
 	"log"
 	"strings"
 
-	"github.com/amimof/huego"
 	"github.com/holoplot/go-evdev"
 )
 
+// GroupState represents the state of a group of lights
+type GroupState struct {
+	On  bool
+	Bri uint8
+}
+
 // Bridge defines the interface for Hue bridge operations
 type Bridge interface {
-	GetGroup(id int) (*huego.Group, error)
-	SetGroupState(id int, state huego.State) (*huego.Response, error)
-	RecallScene(sceneID string, groupID int) (*huego.Response, error)
+	GetGroup(id int) (*GroupState, error)
+	SetGroupState(id int, on bool, bri uint8) error
+	RecallScene(sceneID string, groupID int) error
 }
 
 type Handler struct {
 	cfg             *Config
 	bridge          Bridge
+	v2bridge        *V2Bridge
 	device          *evdev.InputDevice
 	scenes          []string
 	sceneIdx        int
@@ -26,9 +32,9 @@ type Handler struct {
 }
 
 func New(cfg *Config) (*Handler, error) {
-	// Connect to Hue bridge
-	bridge := huego.New(cfg.BridgeIP, cfg.Username)
-	if _, err := bridge.GetLights(); err != nil {
+	// Connect to Hue bridge using v2 API
+	v2bridge, err := NewV2Bridge(cfg.BridgeIP, cfg.Username)
+	if err != nil {
 		return nil, fmt.Errorf("failed to connect to bridge: %v", err)
 	}
 
@@ -38,9 +44,13 @@ func New(cfg *Config) (*Handler, error) {
 		scenes = strings.Split(cfg.SceneIDs, ",")
 	}
 
+	// Set the group ID for the v2 bridge
+	v2bridge.SetGroupID(cfg.GroupID)
+
 	return &Handler{
 		cfg:             cfg,
-		bridge:          bridge,
+		bridge:          v2bridge,
+		v2bridge:        v2bridge,
 		scenes:          scenes,
 		dynamicsEnabled: true, // Start with dynamics enabled
 	}, nil
@@ -87,35 +97,33 @@ func (h *Handler) handleKeyEvent(code evdev.EvCode) {
 }
 
 func (h *Handler) toggleLight() {
-	group, err := h.bridge.GetGroup(h.cfg.GroupID)
+	group, err := h.bridge.GetGroup(0)
 	if err != nil {
 		log.Printf("Error getting group state: %v", err)
 		return
 	}
 
-	state := &huego.State{On: !group.State.On}
-	_, err = h.bridge.SetGroupState(h.cfg.GroupID, *state)
+	err = h.bridge.SetGroupState(0, !group.On, group.Bri)
 	if err != nil {
 		log.Printf("Error toggling group: %v", err)
 	}
 }
 
 func (h *Handler) adjustBrightness(delta int) {
-	group, err := h.bridge.GetGroup(h.cfg.GroupID)
+	group, err := h.bridge.GetGroup(0)
 	if err != nil {
 		log.Printf("Error getting group state: %v", err)
 		return
 	}
 
-	bri := int(group.State.Bri) + delta
+	bri := int(group.Bri) + delta
 	if bri < 0 {
 		bri = 0
 	} else if bri > 254 {
 		bri = 254
 	}
 
-	state := &huego.State{On: true, Bri: uint8(bri)}
-	_, err = h.bridge.SetGroupState(h.cfg.GroupID, *state)
+	err = h.bridge.SetGroupState(0, true, uint8(bri))
 	if err != nil {
 		log.Printf("Error adjusting brightness: %v", err)
 	}
@@ -130,7 +138,7 @@ func (h *Handler) nextScene() {
 	h.sceneIdx = (h.sceneIdx + 1) % len(h.scenes)
 	sceneID := h.scenes[h.sceneIdx]
 
-	_, err := h.bridge.RecallScene(sceneID, 0) // 0 for all lights
+	err := h.bridge.RecallScene(sceneID, 0)
 	if err != nil {
 		log.Printf("Error activating scene: %v", err)
 		return
@@ -139,20 +147,27 @@ func (h *Handler) nextScene() {
 }
 
 func (h *Handler) toggleDynamics() {
-	h.dynamicsEnabled = !h.dynamicsEnabled
-
-	var effect string
-	if h.dynamicsEnabled {
-		effect = "" // Empty string clears the effect, allowing color changes
-		log.Printf("Dynamics enabled")
-	} else {
-		effect = "none" // Freeze current colors
-		log.Printf("Dynamics disabled")
+	if len(h.scenes) == 0 {
+		log.Printf("No scenes configured for dynamics toggle")
+		return
 	}
 
-	state := &huego.State{Effect: effect}
-	_, err := h.bridge.SetGroupState(h.cfg.GroupID, *state)
-	if err != nil {
-		log.Printf("Error toggling dynamics: %v", err)
+	h.dynamicsEnabled = !h.dynamicsEnabled
+
+	// Get current scene ID
+	sceneID := h.scenes[h.sceneIdx]
+
+	if h.v2bridge != nil {
+		err := h.v2bridge.SetDynamics(sceneID, h.dynamicsEnabled)
+		if err != nil {
+			log.Printf("Error toggling dynamics: %v", err)
+			return
+		}
+
+		if h.dynamicsEnabled {
+			log.Printf("Dynamics enabled for scene: %s", sceneID)
+		} else {
+			log.Printf("Dynamics disabled for scene: %s", sceneID)
+		}
 	}
 }

@@ -4,7 +4,7 @@ package handler
 type Config struct {
 	BridgeIP   string
 	Username   string
-	GroupID    int
+	GroupID    string
 	KeyCode    int
 	DevicePath string
 	SceneIDs   string
