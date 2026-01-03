@@ -81,7 +81,7 @@ func (h *Handler) handleKeyEvent(code evdev.EvCode) {
 		h.adjustBrightness(BrightnessIncrement)
 	case evdev.EvCode(SceneNext):
 		h.nextScene()
-	case evdev.EvCode(SceneRight):
+	case evdev.EvCode(ToggleDynamics):
 		h.toggleDynamics()
 	}
 }
